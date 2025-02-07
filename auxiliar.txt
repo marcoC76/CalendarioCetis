@@ -1,0 +1,2 @@
+<!-- titulo centrado de la app: Fechas imoratntes de Cultura Digital II - 2025 -->
+    <h1 class="text-3xl font-bold text-center mb-4">Fechas importantes de Cultura Digital II - 2025</h1>
