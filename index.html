@@ -25,7 +25,7 @@
             },
         }
     </script>
-    <!-- Estilos personalizados para el tooltip -->
+    <!-- Estilos personalizados -->
     <style>
         /* Tooltip básico: se mostrará al pasar el cursor sobre un día con evento */
         .tooltip {
@@ -128,6 +128,9 @@
 
     <!-- Código JavaScript principal para generar el calendario y agregar interactividad -->
     <script>
+        // Detectar si el navegador es móvil
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
         // Función auxiliar para formatear la fecha a "YYYY-MM-DD"
         function formatDate(date) {
             const year = date.getFullYear();
@@ -225,24 +228,27 @@
                         });
                         cell.appendChild(dotContainer);
 
-                        // Crear un tooltip que muestre el título y descripción del primer evento
-                        const tooltip = document.createElement('div');
-                        tooltip.classList.add('tooltip', 'hidden');
-                        // Posicionarlo de forma que se muestre debajo de la celda
-                        tooltip.style.top = '2rem';
-                        tooltip.style.left = '0';
-                        tooltip.innerHTML = `<strong>${eventsForDay[0].title}</strong><br>${eventsForDay[0].description}`;
-                        // Asegurarse de que la celda tenga posición relativa para ubicar el tooltip
-                        cell.classList.add('relative', 'group');
-                        cell.appendChild(tooltip);
+                        // Solo crear y asignar tooltips si NO es dispositivo móvil
+                        if (!isMobile) {
+                            // Crear un tooltip que muestre el título y descripción del primer evento
+                            const tooltip = document.createElement('div');
+                            tooltip.classList.add('tooltip', 'hidden');
+                            // Posicionarlo de forma que se muestre debajo de la celda
+                            tooltip.style.top = '2rem';
+                            tooltip.style.left = '0';
+                            tooltip.innerHTML = `<strong>${eventsForDay[0].title}</strong><br>${eventsForDay[0].description}`;
+                            // Asegurarse de que la celda tenga posición relativa para ubicar el tooltip
+                            cell.classList.add('relative', 'group');
+                            cell.appendChild(tooltip);
 
-                        // Mostrar/ocultar el tooltip al pasar o salir el mouse
-                        cell.addEventListener('mouseenter', () => {
-                            tooltip.classList.remove('hidden');
-                        });
-                        cell.addEventListener('mouseleave', () => {
-                            tooltip.classList.add('hidden');
-                        });
+                            // Mostrar/ocultar el tooltip al pasar o salir el mouse
+                            cell.addEventListener('mouseenter', () => {
+                                tooltip.classList.remove('hidden');
+                            });
+                            cell.addEventListener('mouseleave', () => {
+                                tooltip.classList.add('hidden');
+                            });
+                        }
 
                         // Al hacer clic sobre la celda, se abre el modal con los detalles del/los evento(s)
                         cell.addEventListener('click', () => {
