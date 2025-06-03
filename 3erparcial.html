@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+
+<head>
+    <meta charset="UTF-8" />
+    <!-- Se actualiza la metaetiqueta viewport para desactivar el zoom -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Calendario de Entregas</title>
+    <!-- Importación de Tailwind CSS vía CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Configuración personalizada de Tailwind (modo oscuro y colores inspirados en Material Design) -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#6200EE', // Color primario
+                        secondary: '#03DAC6', // Color secundario
+                        accent1: '#BB86FC',   // Color de acento 1
+                        accent2: '#3700B3',   // Color de acento 2
+                        accent3: '#03A9F4',   // Color de acento 3
+                    },
+                },
+            },
+        }
+    </script>
+    <!-- Estilos personalizados -->
+    <style>
+        /* Tooltip básico: se mostrará al pasar el cursor sobre un día con evento */
+        .tooltip {
+            position: absolute;
+            z-index: 10;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            max-width: 200px;
+            line-height: 1.2;
+        }
+
+        /* Desactivar la selección de texto en todo el documento */
+        body {
+            -webkit-user-select: none;
+            /* Chrome, Safari */
+            -moz-user-select: none;
+            /* Firefox */
+            -ms-user-select: none;
+            /* IE 10+ */
+            user-select: none;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-white">
+    <!-- Contenedor principal -->
+    <div class="container mx-auto p-4">
+        <!-- Título centrado de la app: Fechas importantes de Cultura Digital II - 2025 -->
+        <h1 class="text-3xl font-bold text-center mb-4">Fechas importantes de Cultura Digital II - 2025</h1>
+        <!-- Encabezado con navegación entre meses -->
+        <header class="flex justify-between items-center mb-4">
+            <button id="prevMonth"
+                class="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-md shadow-md transition-colors">
+                Anterior
+            </button>
+            <h1 id="monthYear" class="text-2xl font-bold"></h1>
+            <button id="nextMonth"
+                class="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-md shadow-md transition-colors">
+                Siguiente
+            </button>
+        </header>
+
+        <!-- Calendario: se generará en forma de grid -->
+        <div id="calendar" class="grid grid-cols-7 gap-2">
+            <!-- Aquí se insertarán dinámicamente los elementos del calendario -->
+        </div>
+    </div>
+
+    <!-- Modal para mostrar detalles de los eventos -->
+    <div id="eventModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center">
+        <div class="bg-gray-800 rounded-lg p-6 shadow-lg w-11/12 md:w-1/2 relative">
+            <!-- Botón para cerrar el modal -->
+            <button id="closeModal"
+                class="absolute top-2 right-2 text-gray-400 hover:text-white text-2xl">&times;</button>
+            <h2 id="modalTitle" class="text-xl font-bold mb-2"></h2>
+            <p id="modalDate" class="mb-2"></p>
+            <p id="modalDescription"></p>
+        </div>
+    </div>
+
+    <!-- Datos de ejemplo: JSON con las fechas, título, descripción y color de cada entrega -->
+    <script>
+        // Aquí se definen los eventos; en un escenario real podrías obtenerlos de una API o archivo externo.
+        const eventsData = [
+            {
+                "date": "2025-06-21",
+                "title": "Límite de entrega de Bitácora",
+                "description": "Último día para entregar la bitácora.",
+                "color": "primary" // Color definido
+            },
+            {
+                "date": "2025-06-23",
+                "title": "Límite de entrega del punto extra",
+                "description": "Último día para entregar el punto extra.",
+                "color": "secondary" // Color definido
+            },
+            {
+                "date": "2025-06-20",
+                "title": "Límite de entrega del proyecto",
+                "description": "Último día para entregar el proyecto.",
+                "color": "accent1" // Color definido
+            },
+            {
+                "date": "2025-06-26",
+                "title": "Calificaciones tentativas",
+                "description": "Revisar calificaciones para verificar que todo esté correcto.",
+                "color": "accent2" // Color definido
+            },
+            {
+                "date": "2025-07-01",
+                "title": "Calificaciones definitivas",
+                "description": "Las calificaciones están completamente calculadas y no hay manera de modificarlas.",
+                "color": "accent3" // Color definido
+            }
+        ];
+    </script>
+
+    <!-- Código JavaScript principal para generar el calendario y agregar interactividad -->
+    <script>
+        // Detectar si el navegador es móvil
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+        // Función auxiliar para formatear la fecha a "YYYY-MM-DD"
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Variable que guarda la fecha actual (se inicializa al primer día del mes)
+        let currentDate = new Date();
+        currentDate.setDate(1);
+
+        // Obtener la fecha actual (para resaltar el día actual)
+        const today = new Date();
+        const todayStr = formatDate(today);
+
+        // Si hay eventos, establecer currentDate al mes del primer evento
+        if (eventsData.length > 0) {
+            // Se clona y ordena el arreglo de eventos por fecha (ascendente)
+            const sortedEvents = eventsData.slice().sort((a, b) => new Date(a.date) - new Date(b.date));
+            const firstEventDate = new Date(sortedEvents[0].date);
+            // Se establece currentDate al primer día del mes del primer evento
+            currentDate = new Date(firstEventDate.getFullYear(), firstEventDate.getMonth(), 1);
+        }
+
+        // Función para renderizar el calendario según el mes y año actuales
+        function renderCalendar() {
+            const calendar = document.getElementById('calendar');
+            calendar.innerHTML = ''; // Limpiar contenido previo
+
+            // Mostrar el nombre del mes y año en el encabezado
+            const monthYear = document.getElementById('monthYear');
+            const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            monthYear.textContent = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+
+            // Crear encabezado con los días de la semana
+            const daysOfWeek = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+            for (let i = 0; i < 7; i++) {
+                const dayHeader = document.createElement('div');
+                dayHeader.classList.add('text-center', 'font-bold', 'py-2');
+                dayHeader.textContent = daysOfWeek[i];
+                calendar.appendChild(dayHeader);
+            }
+
+            // Determinar el índice del primer día del mes (0: Domingo, 6: Sábado)
+            const firstDayIndex = currentDate.getDay();
+            // Número de días en el mes actual
+            const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+            // Días del mes anterior (para completar la grilla)
+            const prevLastDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 0).getDate();
+
+            // Calcular el total de celdas (completando semanas)
+            let totalCells = firstDayIndex + lastDay;
+            if (totalCells % 7 !== 0) {
+                totalCells += (7 - (totalCells % 7));
+            }
+
+            // Crear cada celda del calendario
+            for (let i = 0; i < totalCells; i++) {
+                const cell = document.createElement('div');
+                // Clases para darle estilo tipo tarjeta (Material Design: bordes, sombra y transición)
+                cell.classList.add('border', 'border-gray-700', 'h-20', 'relative', 'p-1', 'cursor-pointer', 'rounded-md', 'hover:bg-gray-700', 'transition-colors');
+
+                // Verificar si la celda corresponde al mes anterior, actual o siguiente
+                if (i < firstDayIndex) {
+                    // Días del mes anterior (se muestran en gris)
+                    cell.classList.add('text-gray-500');
+                    const dayNumber = prevLastDay - firstDayIndex + i + 1;
+                    cell.textContent = dayNumber;
+                } else if (i >= firstDayIndex && i < firstDayIndex + lastDay) {
+                    // Días del mes actual
+                    const day = i - firstDayIndex + 1;
+                    cell.textContent = day;
+                    const cellDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+                    const cellDateStr = formatDate(cellDate);
+
+                    // Resaltar el día actual con el mismo estilo del hover
+                    if (cellDateStr === todayStr) {
+                        cell.classList.add('bg-gray-700');
+                    }
+
+                    // Filtrar eventos que coincidan con la fecha actual
+                    const eventsForDay = eventsData.filter(event => event.date === cellDateStr);
+                    if (eventsForDay.length > 0) {
+                        // Crear un contenedor para los dots (uno por evento)
+                        const dotContainer = document.createElement('div');
+                        dotContainer.classList.add('absolute', 'bottom-1', 'left-1', 'flex', 'space-x-1');
+                        // Por cada evento se crea un punto con el color especificado
+                        eventsForDay.forEach(ev => {
+                            const dot = document.createElement('span');
+                            dot.classList.add('w-3', 'h-3', 'rounded-full', 'shadow-md');
+                            // Se añade la clase con el color, por ejemplo: "bg-primary" o "bg-secondary"
+                            dot.classList.add(`bg-${ev.color}`);
+                            dotContainer.appendChild(dot);
+                        });
+                        cell.appendChild(dotContainer);
+
+                        // Solo crear y asignar tooltips si NO es dispositivo móvil
+                        if (!isMobile) {
+                            // Crear un tooltip que muestre el título y descripción del primer evento
+                            const tooltip = document.createElement('div');
+                            tooltip.classList.add('tooltip', 'hidden');
+                            // Posicionarlo de forma que se muestre debajo de la celda
+                            tooltip.style.top = '2rem';
+                            tooltip.style.left = '0';
+                            tooltip.innerHTML = `<strong>${eventsForDay[0].title}</strong><br>${eventsForDay[0].description}`;
+                            // Asegurarse de que la celda tenga posición relativa para ubicar el tooltip
+                            cell.classList.add('relative', 'group');
+                            cell.appendChild(tooltip);
+
+                            // Mostrar/ocultar el tooltip al pasar o salir el mouse
+                            cell.addEventListener('mouseenter', () => {
+                                tooltip.classList.remove('hidden');
+                            });
+                            cell.addEventListener('mouseleave', () => {
+                                tooltip.classList.add('hidden');
+                            });
+                        }
+
+                        // Al hacer clic sobre la celda, se abre el modal con los detalles del/los evento(s)
+                        cell.addEventListener('click', () => {
+                            openModal(eventsForDay, cellDateStr);
+                        });
+                    }
+                } else {
+                    // Días del mes siguiente (se muestran en gris)
+                    cell.classList.add('text-gray-500');
+                    const dayNumber = i - (firstDayIndex + lastDay) + 1;
+                    cell.textContent = dayNumber;
+                }
+                calendar.appendChild(cell);
+            }
+        }
+
+        // Función para abrir el modal con los detalles de los eventos
+        function openModal(events, dateStr) {
+            const modal = document.getElementById('eventModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalDate = document.getElementById('modalDate');
+            const modalDescription = document.getElementById('modalDescription');
+
+            // Si existe un único evento, se muestran sus detalles
+            if (events.length === 1) {
+                modalTitle.textContent = events[0].title;
+                modalDate.textContent = `Fecha: ${dateStr}`;
+                modalDescription.textContent = events[0].description;
+            } else {
+                // Si hay varios eventos en la misma fecha, se listan
+                modalTitle.textContent = 'Eventos';
+                modalDate.textContent = `Fecha: ${dateStr}`;
+                modalDescription.innerHTML = '';
+                events.forEach(ev => {
+                    const eventDiv = document.createElement('div');
+                    eventDiv.classList.add('mb-2', 'border-b', 'border-gray-600', 'pb-2');
+                    eventDiv.innerHTML = `<strong>${ev.title}</strong><br>${ev.description}`;
+                    modalDescription.appendChild(eventDiv);
+                });
+            }
+            // Mostrar el modal (se utiliza flex para centrar el contenido)
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        // Función para cerrar el modal
+        function closeModal() {
+            const modal = document.getElementById('eventModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // Eventos para cerrar el modal (botón y clic fuera del contenido)
+        document.getElementById('closeModal').addEventListener('click', closeModal);
+        document.getElementById('eventModal').addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Navegación entre meses
+        document.getElementById('prevMonth').addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar();
+        });
+        document.getElementById('nextMonth').addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar();
+        });
+
+        // Renderizar el calendario al cargar la página
+        renderCalendar();
+    </script>
+</body>
+
+</html>
